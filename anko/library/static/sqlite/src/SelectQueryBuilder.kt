@@ -26,6 +26,7 @@ abstract class SelectQueryBuilder(val tableName: String) {
     private val columns = arrayListOf<String>()
     private val groupBy = arrayListOf<String>()
     private val orderBy = arrayListOf<String>()
+    private val joins = arrayListOf<String>()
 
     private var distinct: Boolean = false
 
@@ -73,7 +74,7 @@ abstract class SelectQueryBuilder(val tableName: String) {
     internal fun doExec(): Cursor {
         val finalSelection = if (selectionApplied) selection else null
         val finalSelectionArgs = if (selectionApplied && useNativeSelection) nativeSelectionArgs else null
-        return execQuery(distinct, tableName, columns.toTypedArray(),
+        return execQuery(distinct, tableName, columns.toTypedArray(), joins.toTypedArray(), 
                 finalSelection, finalSelectionArgs,
                 groupBy.joinToString(", "), having, orderBy.joinToString(", "), limit)
     }
@@ -82,6 +83,7 @@ abstract class SelectQueryBuilder(val tableName: String) {
             distinct: Boolean,
             tableName: String,
             columns: Array<String>,
+            joins: Array<String>,
             selection: String?,
             selectionArgs: Array<out String>?,
             groupBy: String,
@@ -102,6 +104,16 @@ abstract class SelectQueryBuilder(val tableName: String) {
 
     fun groupBy(value: String): SelectQueryBuilder {
         groupBy.add(value)
+        return this
+    }
+
+    fun innerJoin(table: String, clause: String): SelectQueryBuilder {
+        joins.add("INNER JOIN $table ON $clause")
+        return this
+    }
+
+    fun leftJoin(table: String, clause: String): SelectQueryBuilder {
+        joins.add("LEFT JOIN $table ON $clause")
         return this
     }
 
@@ -211,11 +223,12 @@ class AndroidSdkDatabaseSelectQueryBuilder(
             selection: String?,
             selectionArgs: Array<out String>?,
             groupBy: String,
+            joins: Array<String>,
             having: String?,
             orderBy: String,
             limit: String?
     ): Cursor {
-        return db.query(distinct, tableName, columns, selection, selectionArgs, groupBy, having, orderBy, limit)
+        return db.query(distinct, tableName, columns, joins, selection, selectionArgs, groupBy, having, orderBy, limit)
     }
 
 }
